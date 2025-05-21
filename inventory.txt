@@ -1,0 +1,6 @@
+Sprite,5.0,25.0,100
+Coke,5.0,25.0,100
+Milk tea,5.0,25.0,98
+Red tea,5.0,30.0,98
+Chocolate milk,5.0,15.0,100
+Beef Noodle,20.0,35.0,23

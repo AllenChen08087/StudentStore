@@ -1,0 +1,3 @@
+Milk tea,2,40.0
+Beef Noodle,1,15.0
+Red tea,2,50.0
