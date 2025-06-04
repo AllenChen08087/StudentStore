@@ -1,15 +1,17 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class MainFrame extends JFrame {
     private StudentStore store;
     private JTextArea outputArea;
-    private JPanel menuPanel;
+    private JPanel customerPanel;
+    private JPanel adminPanel;
+    private JPanel mainMenuPanel;
     private JPanel monthPanel;
     private JPanel inputPanel;
     private JTextField inputField;
@@ -29,6 +31,13 @@ public class MainFrame extends JFrame {
     private JScrollPane orderHistoryScrollPane;
     private JPanel editProductPanel;
     private JScrollPane editProductScrollPane;
+    private JLabel imageLabel;
+    private JPanel eastPanel;
+    private CardLayout eastCardLayout;
+    private JPanel blankPanel;
+    private static final String IMAGE_PANEL = "image";
+    private static final String PRODUCT_PANEL = "products";
+    private static final String BLANK_PANEL = "blank";
 
     public MainFrame() {
         store = new StudentStore();
@@ -38,7 +47,7 @@ public class MainFrame extends JFrame {
 
         setTitle("Student Store Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 600);
+        setSize(1000, 600);
         setLayout(new BorderLayout());
 
         addWindowListener(new WindowAdapter() {
@@ -64,34 +73,56 @@ public class MainFrame extends JFrame {
         JScrollPane outputScrollPane = new JScrollPane(outputArea);
         add(outputScrollPane, BorderLayout.CENTER);
 
-        menuPanel = new JPanel();
-        menuPanel.setLayout(new GridLayout(14, 1, 10, 10));
-        menuPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        customerPanel = new JPanel();
+        customerPanel.setLayout(new GridLayout(6, 1, 10, 10));
+        customerPanel.setBorder(BorderFactory.createTitledBorder("Customer Options"));
 
-        String[] buttonLabels = {
+        String[] customerButtonLabels = {
             "Show Products",
             "Buy Product",
-            "Show Sales Report (Admin Only)",
             "Show Popular Products",
+            "Order List",
+            "Suggestions"
+        };
+
+        for (int i = 0; i < customerButtonLabels.length; i++) {
+            JButton button = new JButton(customerButtonLabels[i]);
+            button.setFont(new Font("Arial", Font.PLAIN, 18));
+            final int option = i + 1;
+            button.addActionListener(e -> handleMenuOption(option));
+            customerPanel.add(button);
+        }
+
+        adminPanel = new JPanel();
+        adminPanel.setLayout(new GridLayout(11, 1, 10, 10));
+        adminPanel.setBorder(BorderFactory.createTitledBorder("Admin Options"));
+
+        String[] adminButtonLabels = {
+            "Show Sales Report (Admin Only)",
             "Add New Product (Admin Only)",
             "Edit Products (Admin Only)",
             "Restock Product (Admin Only)",
             "Show Schedule",
             "Edit Employee (Admin Only)",
             "Show Employees",
-            "Order List",
-            "Suggestions",
             "Order History (Admin Only)",
+            "Export Sales Report (Admin Only)",
+            "Change Password (Admin Only)",
             "Exit"
         };
 
-        for (int i = 0; i < buttonLabels.length; i++) {
-            JButton button = new JButton(buttonLabels[i]);
+        for (int i = 0; i < adminButtonLabels.length; i++) {
+            JButton button = new JButton(adminButtonLabels[i]);
             button.setFont(new Font("Arial", Font.PLAIN, 18));
-            final int option = i + 1;
+            final int option = i + 6;
             button.addActionListener(e -> handleMenuOption(option));
-            menuPanel.add(button);
+            adminPanel.add(button);
         }
+
+        mainMenuPanel = new JPanel(new BorderLayout());
+        mainMenuPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainMenuPanel.add(customerPanel, BorderLayout.NORTH);
+        mainMenuPanel.add(adminPanel, BorderLayout.CENTER);
 
         monthPanel = new JPanel();
         monthPanel.setLayout(new GridLayout(13, 1, 10, 10));
@@ -103,22 +134,23 @@ public class MainFrame extends JFrame {
         };
 
         JButton backButton = new JButton("Back to Menu");
-        backButton.setFont(new Font("Arial", Font.PLAIN, 18));
+        backButton.setFont(new Font("Arial", Font.PLAIN, 16));
         backButton.addActionListener(e -> {
             monthPanel.setVisible(false);
-            menuPanel.setVisible(true);
+            mainMenuPanel.setVisible(true);
+            showEastPanel(IMAGE_PANEL);
         });
         monthPanel.add(backButton);
 
         for (int i = 0; i < months.length; i++) {
             JButton monthButton = new JButton(months[i]);
-            monthButton.setFont(new Font("Arial", Font.PLAIN, 18));
+            monthButton.setFont(new Font("Arial", Font.PLAIN, 16));
             final int month = i + 1;
             monthButton.addActionListener(e -> {
                 if (store.getAvailableMonths().contains(month)) {
                     captureOutput(() -> store.showSalesReport(month));
                 } else {
-                    outputArea.append("\n❌ No Sales Report Available for " + months[month - 1]);
+                    outputArea.append("\n❌ No Sales Report available for " + months[month - 1]);
                 }
             });
             monthPanel.add(monthButton);
@@ -143,7 +175,7 @@ public class MainFrame extends JFrame {
         editProductScrollPane.setVisible(false);
 
         JPanel leftPanel = new JPanel(new CardLayout());
-        leftPanel.add(menuPanel, "menu");
+        leftPanel.add(mainMenuPanel, "menu");
         leftPanel.add(monthPanel, "months");
         leftPanel.add(orderHistoryScrollPane, "orderHistory");
         leftPanel.add(editProductScrollPane, "editProducts");
@@ -181,11 +213,11 @@ public class MainFrame extends JFrame {
         quantityFields = new HashMap<>();
         productButtonPanel = new JPanel();
         productButtonPanel.setLayout(new BoxLayout(productButtonPanel, BoxLayout.Y_AXIS));
-        productButtonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        productButtonPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5));
         productScrollPane = new JScrollPane(productButtonPanel, 
             JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, 
             JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        productScrollPane.setVisible(false);
+        productScrollPane.setPreferredSize(new Dimension(400, 0));
 
         totalCostLabel = new JLabel("Total: $0.00");
         totalCostLabel.setFont(new Font("Arial", Font.BOLD, 24));
@@ -194,7 +226,32 @@ public class MainFrame extends JFrame {
         confirmPurchaseButton.addActionListener(e -> confirmPurchase());
         confirmPurchaseButton.setVisible(false);
 
-        add(productScrollPane, BorderLayout.EAST);
+        imageLabel = new JLabel();
+        try {
+            ImageIcon icon = new ImageIcon("C:\\Users\\chen6\\Downloads\\Blue and White Modern Watercolor Background Instagram Story.png");
+            if (icon.getImageLoadStatus() == MediaTracker.COMPLETE) {
+                Image scaledImage = icon.getImage().getScaledInstance(400, 550, Image.SCALE_SMOOTH);
+                imageLabel.setIcon(new ImageIcon(scaledImage));
+            } else {
+                imageLabel.setText("Image failed to load");
+            }
+        } catch (Exception e) {
+            imageLabel.setText("Error loading image: " + e.getMessage());
+        }
+
+        blankPanel = new JPanel();
+        blankPanel.setBackground(UIManager.getColor("Panel.background"));
+
+        eastPanel = new JPanel();
+        eastPanel.setPreferredSize(new Dimension(400, 0));
+        eastCardLayout = new CardLayout();
+        eastPanel.setLayout(eastCardLayout);
+        eastPanel.add(imageLabel, IMAGE_PANEL);
+        eastPanel.add(productScrollPane, PRODUCT_PANEL);
+        eastPanel.add(blankPanel, BLANK_PANEL);
+        showEastPanel(IMAGE_PANEL);
+
+        add(eastPanel, BorderLayout.EAST);
 
         outputArea.setText("Welcome to the Student Store Management System!\n" +
                           "Please select an option from the menu.");
@@ -233,53 +290,75 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private List<Product> getInventory() {
+        return store.getInventory();
+    }
+
+    private void showEastPanel(String panelName) {
+        eastCardLayout.show(eastPanel, panelName);
+        eastPanel.revalidate();
+        eastPanel.repaint();
+    }
+
     private void handleMenuOption(int option) {
         switch (option) {
-            case 1: captureOutput(() -> store.displayProducts()); break;
-            case 2: showProductButtons(); break;
-            case 3:
-                if (checkPassword()) {
-                    monthPanel.setVisible(true);
-                    menuPanel.setVisible(false);
-                }
+            case 1:
+                captureOutput(() -> store.displayProducts());
+                showEastPanel(IMAGE_PANEL);
                 break;
-            case 4: captureOutput(() -> store.showPopularAndProfitableProducts()); break;
+            case 2:
+                showProductButtons();
+                break;
+            case 3:
+                captureOutput(() -> store.showPopularAndProfitableProducts());
+                showEastPanel(IMAGE_PANEL);
+                break;
+            case 4:
+                captureOutput(() -> store.displayOrderList());
+                showEastPanel(IMAGE_PANEL);
+                break;
             case 5:
-                if (checkPassword()) {
-                    showInputPanel("Enter product name (or click 'Go Back to Home' to cancel): ");
-                    currentState = 51;
-                }
+                showInputPanel("Please enter your suggestion (or click 'Go Back to Home' to cancel): ");
+                currentState = 111;
                 break;
             case 6:
                 if (checkPassword()) {
-                    showEditProductPanel();
+                    monthPanel.setVisible(true);
+                    mainMenuPanel.setVisible(false);
+                    showEastPanel(BLANK_PANEL);
                 }
                 break;
             case 7:
                 if (checkPassword()) {
                     showInputPanel("Enter product name (or click 'Go Back to Home' to cancel): ");
-                    currentState = 61;
+                    currentState = 51;
                 }
                 break;
             case 8:
-                store.loadState();
-                captureOutput(() -> store.displaySchedule());
+                if (checkPassword()) {
+                    showEditProductPanel();
+                }
                 break;
             case 9:
+                if (checkPassword()) {
+                    showInputPanel("Enter product name (or click 'Go Back to Home' to cancel): ");
+                    currentState = 61;
+                }
+                break;
+            case 10:
+                store.loadState();
+                captureOutput(() -> store.displaySchedule());
+                showEastPanel(IMAGE_PANEL);
+                break;
+            case 11:
                 if (checkPassword()) {
                     showInputPanel("Choose an option:\n1. Add Employee\n2. Change Employee Availability\n3. Fire Employee\n(or click 'Go Back to Home' to cancel): ");
                     currentState = 81;
                 }
                 break;
-            case 10:
-                captureOutput(() -> store.displayEmployees());
-                break;
-            case 11:
-                captureOutput(() -> store.displayOrderList());
-                break;
             case 12:
-                showInputPanel("Please enter your suggestion (or click 'Go Back to Home' to cancel): ");
-                currentState = 111;
+                captureOutput(() -> store.displayEmployees());
+                showEastPanel(IMAGE_PANEL);
                 break;
             case 13:
                 if (checkPassword()) {
@@ -287,102 +366,244 @@ public class MainFrame extends JFrame {
                 }
                 break;
             case 14:
+                if (checkPassword()) {
+                    showExportSalesReportDialog();
+                }
+                break;
+            case 15:
+                if (checkPassword()) {
+                    showChangePasswordDialog();
+                }
+                break;
+            case 16:
                 outputArea.append("\nExiting... Thank you! 🛒");
                 store.saveState();
                 dispose();
                 break;
         }
-    }
-
-    private void showProductButtons() {
-        productButtonPanel.removeAll();
-        productQuantities.clear();
-        quantityFields.clear();
-        List<Product> inventory = getInventory();
-
-        outputArea.append("\nSelect products and quantities to buy:");
-        for (Product p : inventory) {
-            productQuantities.put(p.getName(), 0);
-
-            JPanel productRow = new JPanel(new BorderLayout(10, 0));
-
-            JLabel productLabel = new JLabel(p.getName() + " ($" + p.getSellingPrice() + ", Stock: " + p.getStock() + ")");
-            productLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-
-            JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-
-            JButton minusButton = new JButton("-");
-            minusButton.setFont(new Font("Arial", Font.BOLD, 18));
-            minusButton.setPreferredSize(new Dimension(50, 50));
-            minusButton.setMargin(new Insets(0, 0, 0, 0));
-
-            JTextField quantityField = new JTextField("0", 4);
-            quantityField.setFont(new Font("Arial", Font.PLAIN, 16));
-            quantityField.setHorizontalAlignment(JTextField.CENTER);
-            quantityFields.put(p.getName(), quantityField);
-
-            JButton plusButton = new JButton("+");
-            plusButton.setFont(new Font("Arial", Font.BOLD, 18));
-            plusButton.setPreferredSize(new Dimension(50, 50));
-            plusButton.setMargin(new Insets(0, 0, 0, 0));
-
-            minusButton.addActionListener(e -> {
-                int currentQuantity = productQuantities.get(p.getName());
-                if (currentQuantity > 0) {
-                    productQuantities.put(p.getName(), currentQuantity - 1);
-                    quantityField.setText(String.valueOf(currentQuantity - 1));
-                    updateTotalCost();
-                }
-            });
-
-            plusButton.addActionListener(e -> {
-                int currentQuantity = productQuantities.get(p.getName());
-                if (currentQuantity < p.getStock()) {
-                    productQuantities.put(p.getName(), currentQuantity + 1);
-                    quantityField.setText(String.valueOf(currentQuantity + 1));
-                    updateTotalCost();
-                }
-            });
-
-            quantityField.addFocusListener(new FocusAdapter() {
-                @Override
-                public void focusLost(FocusEvent e) {
-                    validateQuantityField(p, quantityField);
-                }
-            });
-
-            quantityField.addActionListener(e -> validateQuantityField(p, quantityField));
-
-            quantityPanel.add(minusButton);
-            quantityPanel.add(quantityField);
-            quantityPanel.add(plusButton);
-
-            productRow.add(productLabel, BorderLayout.CENTER);
-            productRow.add(quantityPanel, BorderLayout.EAST);
-            productButtonPanel.add(productRow);
-        }
-
-        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-        totalPanel.add(totalCostLabel);
-        totalPanel.add(confirmPurchaseButton);
-        productButtonPanel.add(totalPanel);
-
-        JButton backToMenuButton = new JButton("Back to Menu");
-        backToMenuButton.setFont(new Font("Arial", Font.PLAIN, 16));
-        backToMenuButton.setPreferredSize(new Dimension(150, 30));
-        backToMenuButton.addActionListener(e -> handleGoBack());
-        productButtonPanel.add(backToMenuButton);
-
-        menuPanel.setVisible(false);
-        monthPanel.setVisible(false);
-        orderHistoryScrollPane.setVisible(false);
-        editProductScrollPane.setVisible(false);
-        productScrollPane.setVisible(true);
-        confirmPurchaseButton.setVisible(true);
-        updateTotalCost();
         revalidate();
         repaint();
     }
+
+    private void captureOutput(Runnable task) {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+
+        try {
+            System.setOut(ps);
+            task.run();
+            ps.flush();
+            String output = baos.toString();
+            outputArea.append("\n" + output);
+        } finally {
+            System.setOut(originalOut);
+        }
+    }
+
+    private void showChangePasswordDialog() {
+        showEastPanel(BLANK_PANEL);
+        ChangePasswordDialog dialog = new ChangePasswordDialog(this);
+        dialog.setVisible(true);
+        showEastPanel(IMAGE_PANEL);
+        if (dialog.isChanged()) {
+            outputArea.append("\n✅ Password changed successfully.");
+        }
+    }
+
+    private void showExportSalesReportDialog() {
+        showEastPanel(BLANK_PANEL);
+        JDialog dialog = new JDialog(this, "Export Sales Report", true);
+        dialog.setLayout(new GridLayout(3, 2, 10, 10));
+        dialog.setSize(300, 150);
+        dialog.setLocationRelativeTo(this);
+
+        JLabel monthLabel = new JLabel("Select Month:");
+        String[] months = {
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        };
+        JComboBox<String> monthComboBox = new JComboBox<>(months);
+        monthComboBox.setFont(new Font("Arial", Font.PLAIN, 16));
+
+        JButton exportButton = new JButton("Export");
+        JButton cancelButton = new JButton("Cancel");
+
+        exportButton.addActionListener(e -> {
+            int selectedMonth = monthComboBox.getSelectedIndex() + 1;
+            if (store.getAvailableMonths().contains(selectedMonth)) {
+                exportSalesReport(selectedMonth, months[selectedMonth - 1]);
+                dialog.dispose();
+                showEastPanel(IMAGE_PANEL);
+            } else {
+                JOptionPane.showMessageDialog(dialog, 
+                    "No sales data available for " + months[selectedMonth - 1], 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> {
+            dialog.dispose();
+            showEastPanel(IMAGE_PANEL);
+        });
+
+        dialog.add(monthLabel);
+        dialog.add(monthComboBox);
+        dialog.add(new JLabel());
+        dialog.add(exportButton);
+        dialog.add(new JLabel());
+        dialog.add(cancelButton);
+
+        dialog.setVisible(true);
+    }
+
+    private void exportSalesReport(int month, String monthName) {
+        String csvContent = store.generateSalesReportCSV(month);
+        if (csvContent.trim().endsWith("Product Name,Units Sold,Profit,Stock Remaining")) {
+            outputArea.append("\n❌ No sales data to export for " + monthName);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Sales Report for " + monthName);
+        fileChooser.setSelectedFile(new File("SalesReport_" + monthName + ".csv"));
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            try (PrintWriter writer = new PrintWriter(new FileWriter(fileToSave))) {
+                writer.write(csvContent);
+                outputArea.append("\n✅ Sales report exported successfully to " + fileToSave.getAbsolutePath());
+                outputArea.append("\nYou can now upload this CSV file to Google Sheets.");
+            } catch (IOException e) {
+                outputArea.append("\n❌ Error exporting sales report: " + e.getMessage());
+            }
+        } else {
+            outputArea.append("\nExport cancelled.");
+        }
+    }
+
+    private void showProductButtons() {
+    productButtonPanel.removeAll();
+    productQuantities.clear();
+    quantityFields.clear();
+    List<Product> inventory = getInventory();
+
+    outputArea.append("\nSelect products and quantities to buy:");
+    for (Product p : inventory) {
+        productQuantities.put(p.getName(), 0);
+
+        JPanel productRow = new JPanel(new GridBagLayout());
+        productRow.setMaximumSize(new Dimension(380, 80));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel productLabel = new JLabel(p.getName() + " ($" + p.getSellingPrice() + ", Stock: " + p.getStock() + ")");
+        productLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        productLabel.setPreferredSize(new Dimension(200, 30));
+
+        JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+
+        JButton minusButton = new JButton("-");
+        minusButton.setFont(new Font("Arial", Font.BOLD, 16));
+        minusButton.setPreferredSize(new Dimension(40, 30));
+        minusButton.setMargin(new Insets(0, 0, 0, 0));
+
+        JTextField quantityField = new JTextField("0", 3);
+        quantityField.setFont(new Font("Arial", Font.PLAIN, 16));
+        quantityField.setHorizontalAlignment(JTextField.CENTER);
+        quantityFields.put(p.getName(), quantityField);
+
+        JButton plusButton = new JButton("+");
+        plusButton.setFont(new Font("Arial", Font.BOLD, 16));
+        plusButton.setPreferredSize(new Dimension(40, 30));
+        plusButton.setMargin(new Insets(0, 0, 0, 0));
+
+        minusButton.addActionListener(e -> {
+            int currentQuantity = productQuantities.get(p.getName());
+            if (currentQuantity > 0) {
+                productQuantities.put(p.getName(), currentQuantity - 1);
+                quantityField.setText(String.valueOf(currentQuantity - 1));
+                updateTotalCost();
+            }
+        });
+
+        plusButton.addActionListener(e -> {
+            int currentQuantity = productQuantities.get(p.getName());
+            if (currentQuantity < p.getStock()) {
+                productQuantities.put(p.getName(), currentQuantity + 1);
+                quantityField.setText(String.valueOf(currentQuantity + 1));
+                updateTotalCost();
+            }
+        });
+
+        quantityField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                validateQuantityField(p, quantityField);
+            }
+        });
+
+        quantityField.addActionListener(e -> validateQuantityField(p, quantityField));
+
+        quantityPanel.add(minusButton);
+        quantityPanel.add(quantityField);
+        quantityPanel.add(plusButton);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.7;
+        productRow.add(productLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.3;
+        productRow.add(quantityPanel, gbc);
+
+        productButtonPanel.add(productRow);
+        productButtonPanel.add(Box.createVerticalStrut(10));
+    }
+
+    JPanel totalPanel = new JPanel(new GridBagLayout());
+    totalPanel.setMaximumSize(new Dimension(380, 80));
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(5, 5, 5, 5);
+    gbc.anchor = GridBagConstraints.WEST;
+
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    totalPanel.add(totalCostLabel, gbc);
+
+    gbc.gridx = 1;
+    totalPanel.add(confirmPurchaseButton, gbc);
+    productButtonPanel.add(totalPanel);
+
+    JButton backToMenuButton = new JButton("Back to Menu");
+    backToMenuButton.setFont(new Font("Arial", Font.PLAIN, 16));
+    backToMenuButton.setPreferredSize(new Dimension(150, 30));
+    backToMenuButton.addActionListener(e -> handleGoBack());
+    productButtonPanel.add(backToMenuButton);
+
+    mainMenuPanel.setVisible(false);
+    monthPanel.setVisible(false);
+    orderHistoryScrollPane.setVisible(false);
+    editProductScrollPane.setVisible(false);
+    showEastPanel(PRODUCT_PANEL);
+    confirmPurchaseButton.setVisible(true);
+    System.out.println("Confirm Purchase button visibility: " + confirmPurchaseButton.isVisible());
+    updateTotalCost();
+    productScrollPane.revalidate();
+    productScrollPane.repaint();
+    eastPanel.revalidate();
+    eastPanel.repaint();
+    SwingUtilities.invokeLater(() -> {
+        JScrollBar vertical = productScrollPane.getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
+    });
+    revalidate();
+    repaint();
+}
 
     private void validateQuantityField(Product product, JTextField quantityField) {
         try {
@@ -414,12 +635,10 @@ public class MainFrame extends JFrame {
             JLabel productLabel = new JLabel(String.format("%s (Cost: $%.2f, Selling: $%.2f, Stock: %d)",
                     p.getName(), p.getCostPrice(), p.getSellingPrice(), p.getStock()));
             productLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-
             JButton editButton = new JButton("Edit");
             editButton.setFont(new Font("Arial", Font.PLAIN, 16));
             editButton.setPreferredSize(new Dimension(100, 30));
-            editButton.addActionListener(e -> showEditProductDialog(p));
-
+            editButton.addActionListener(e -> showEditProduct(p));
             productRow.add(productLabel, BorderLayout.CENTER);
             productRow.add(editButton, BorderLayout.EAST);
             editProductPanel.add(productRow);
@@ -431,17 +650,18 @@ public class MainFrame extends JFrame {
         backToMenuButton.addActionListener(e -> handleGoBack());
         editProductPanel.add(backToMenuButton);
 
-        menuPanel.setVisible(false);
+        mainMenuPanel.setVisible(false);
         monthPanel.setVisible(false);
-        productScrollPane.setVisible(false);
         orderHistoryScrollPane.setVisible(false);
         editProductScrollPane.setVisible(true);
         confirmPurchaseButton.setVisible(false);
+        showEastPanel(BLANK_PANEL);
         revalidate();
         repaint();
     }
 
-    private void showEditProductDialog(Product product) {
+    private void showEditProduct(Product product) {
+        showEastPanel(BLANK_PANEL);
         JDialog dialog = new JDialog(this, "Edit Product: " + product.getName(), true);
         dialog.setLayout(new GridLayout(5, 2, 10, 10));
         dialog.setSize(400, 250);
@@ -460,7 +680,6 @@ public class MainFrame extends JFrame {
         saveButton.addActionListener(e -> {
             try {
                 String newName = nameField.getText().trim().isEmpty() ? product.getName() : nameField.getText().trim();
-
                 double newCostPrice = costPriceField.getText().trim().isEmpty() ?
                         product.getCostPrice() : Double.parseDouble(costPriceField.getText().trim());
                 double newSellingPrice = sellingPriceField.getText().trim().isEmpty() ?
@@ -482,7 +701,10 @@ public class MainFrame extends JFrame {
             }
         });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(e -> {
+            dialog.dispose();
+            showEditProductPanel();
+        });
 
         dialog.add(nameLabel);
         dialog.add(nameField);
@@ -537,19 +759,19 @@ public class MainFrame extends JFrame {
         backToMenuButton.addActionListener(e -> handleGoBack());
         orderHistoryPanel.add(backToMenuButton);
 
-        menuPanel.setVisible(false);
+        mainMenuPanel.setVisible(false);
         monthPanel.setVisible(false);
-        productScrollPane.setVisible(false);
         editProductScrollPane.setVisible(false);
         orderHistoryScrollPane.setVisible(true);
         confirmPurchaseButton.setVisible(false);
+        showEastPanel(BLANK_PANEL);
         revalidate();
         repaint();
     }
 
     private void hideProductButtons() {
-        productScrollPane.setVisible(false);
         confirmPurchaseButton.setVisible(false);
+        showEastPanel(BLANK_PANEL);
     }
 
     private boolean checkPassword() {
@@ -557,6 +779,7 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
         if (!dialog.isConfirmed()) {
             outputArea.append("\n❌ Access denied or cancelled.");
+            showEastPanel(IMAGE_PANEL);
             return false;
         }
         return true;
@@ -566,39 +789,49 @@ public class MainFrame extends JFrame {
         hideProductButtons();
         orderHistoryScrollPane.setVisible(false);
         editProductScrollPane.setVisible(false);
-        menuPanel.setVisible(false);
+        mainMenuPanel.setVisible(false);
         monthPanel.setVisible(false);
         inputPanel.setVisible(true);
         outputArea.append("\n" + prompt);
         inputField.requestFocus();
+        showEastPanel(BLANK_PANEL);
+        revalidate();
+        repaint();
     }
 
     private void hideInputPanel() {
         inputPanel.setVisible(false);
-        menuPanel.setVisible(true);
+        mainMenuPanel.setVisible(true);
         currentState = 0;
         productName = "";
         tempInput = "";
+        showEastPanel(IMAGE_PANEL);
+        revalidate();
+        repaint();
     }
 
     private void handleGoBack() {
-        outputArea.append("\nReturning to main menu...");
+        outputArea.append("\nReturning to the main menu...");
         hideProductButtons();
         orderHistoryScrollPane.setVisible(false);
         editProductScrollPane.setVisible(false);
         hideInputPanel();
         monthPanel.setVisible(false);
-        for (String productName : productQuantities.keySet()) {
-            productQuantities.put(productName, 0);
-            quantityFields.get(productName).setText("0");
+        for (String item : productQuantities.keySet()) {
+            productQuantities.put(item, 0);
+            if (quantityFields.get(item) != null) {
+                quantityFields.get(item).setText("0");
+            }
         }
         updateTotalCost();
+        revalidate();
+        repaint();
     }
 
     private void processInput(String input) {
         if (input.isEmpty()) return;
 
-        input = input.trim();
+        input = input.strip();
         inputField.setText("");
 
         switch (currentState) {
@@ -625,13 +858,13 @@ public class MainFrame extends JFrame {
                 handleRestockQuantity(input);
                 break;
             case 81:
-                handleEditEmployeeOption(input);
+                handleEditEmployee(input);
                 break;
             case 82:
                 handleAddEmployee(input);
                 break;
             case 83:
-                handleChangeEmployeeAvailability(input);
+                handleChangeEmployee(input);
                 break;
             case 84:
                 handleFireEmployee(input);
@@ -640,7 +873,7 @@ public class MainFrame extends JFrame {
                 handleAddEmployeeAvailability(input);
                 break;
             case 86:
-                handleChangeEmployeeAvailabilityInput(input);
+                handleChangeEmployeeAvailability(input);
                 break;
             case 111:
                 final String suggestion = input;
@@ -650,7 +883,7 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void handleEditEmployeeOption(String input) {
+    private void handleEditEmployee(String input) {
         switch (input) {
             case "1":
                 outputArea.append("\nEnter employee name (or click 'Go Back to Home' to cancel): ");
@@ -677,7 +910,7 @@ public class MainFrame extends JFrame {
         tempInput = name;
     }
 
-    private void handleChangeEmployeeAvailability(String name) {
+    private void handleChangeEmployee(String name) {
         outputArea.append("\nEnter new availability for Monday to Friday (true/false) separated by commas (e.g., true,false,true,true,false): ");
         currentState = 86;
         tempInput = name;
@@ -695,7 +928,12 @@ public class MainFrame extends JFrame {
     private void handleAddCostPrice(String input) {
         try {
             double costPrice = Double.parseDouble(input);
-            tempInput = String.valueOf(costPrice);
+            if (costPrice < 0) {
+                outputArea.append("\n❌ Cost price cannot be negative. Please enter a valid number.");
+                outputArea.append("\nEnter cost price (or click 'Go Back to Home' to cancel): ");
+                return;
+            }
+            tempInput = input;
             outputArea.append("\nEnter selling price (or click 'Go Back to Home' to cancel): ");
             currentState = 53;
         } catch (NumberFormatException e) {
@@ -707,7 +945,12 @@ public class MainFrame extends JFrame {
     private void handleAddSellingPrice(String input) {
         try {
             double sellingPrice = Double.parseDouble(input);
-            tempInput += "," + sellingPrice;
+            if (sellingPrice < 0) {
+                outputArea.append("\n❌ Selling price cannot be negative. Please enter a valid number.");
+                outputArea.append("\nEnter selling price (or click 'Go Back to Home' to cancel): ");
+                return;
+            }
+            tempInput += "," + input;
             outputArea.append("\nEnter stock quantity (or click 'Go Back to Home' to cancel): ");
             currentState = 54;
         } catch (NumberFormatException e) {
@@ -719,11 +962,18 @@ public class MainFrame extends JFrame {
     private void handleAddStock(String input) {
         try {
             int stock = Integer.parseInt(input);
-            String[] prices = tempInput.split(",");
-            Product newProduct = new Product(productName, Double.parseDouble(prices[0]),
-                                          Double.parseDouble(prices[1]), stock);
-            store.addProduct(newProduct);
-            outputArea.append("\n✅ Product '" + productName + "' added successfully!");
+            if (stock < 0) {
+                outputArea.append("\n❌ Stock cannot be negative. Please enter a valid number.");
+                outputArea.append("\nEnter stock quantity (or click 'Go Back to Home' to cancel): ");
+                return;
+            }
+            String[] parts = tempInput.split(",");
+            double costPrice = Double.parseDouble(parts[0]);
+            double sellingPrice = Double.parseDouble(parts[1]);
+            captureOutput(() -> {
+                store.addProduct(new Product(productName, costPrice, sellingPrice, stock));
+                store.saveState();
+            });
             hideInputPanel();
         } catch (NumberFormatException e) {
             outputArea.append("\n❌ Invalid quantity. Please enter a number.");
@@ -734,7 +984,10 @@ public class MainFrame extends JFrame {
     private void handleRestockQuantity(String input) {
         try {
             int quantity = Integer.parseInt(input);
-            captureOutput(() -> store.restock(productName, quantity));
+            captureOutput(() -> {
+                store.restock(productName, quantity);
+                store.saveState();
+            });
             hideInputPanel();
         } catch (NumberFormatException e) {
             outputArea.append("\n❌ Invalid quantity. Please enter a number.");
@@ -744,104 +997,93 @@ public class MainFrame extends JFrame {
 
     private void handleAddEmployeeAvailability(String input) {
         try {
-            String[] availabilityStr = input.split(",");
-            if (availabilityStr.length != 5) {
-                throw new IllegalArgumentException("Invalid format. Please enter exactly 5 values.");
+            String[] availabilities = input.split(",");
+            if (availabilities.length != 5) {
+                outputArea.append("\n❌ Please enter exactly 5 availability values (true/false) separated by commas.");
+                outputArea.append("\nEnter availability for Monday to Friday (true/false) separated by commas (e.g., true,false,true,true,false): ");
+                return;
             }
             boolean[] availability = new boolean[5];
             for (int i = 0; i < 5; i++) {
-                availability[i] = Boolean.parseBoolean(availabilityStr[i].trim());
+                availability[i] = Boolean.parseBoolean(availabilities[i].trim());
             }
+            final String name = tempInput;
             captureOutput(() -> {
-                store.hireEmployee(tempInput, availability);
+                store.hireEmployee(name, availability);
                 store.saveState();
                 store.displaySchedule();
             });
             hideInputPanel();
         } catch (Exception e) {
-            outputArea.append("\n❌ Invalid input. Please enter availability as true/false separated by commas.");
+            outputArea.append("\n❌ Invalid input. Please use true/false values separated by commas.");
             outputArea.append("\nEnter availability for Monday to Friday (true/false) separated by commas (e.g., true,false,true,true,false): ");
         }
     }
 
-    private void handleChangeEmployeeAvailabilityInput(String input) {
+    private void handleChangeEmployeeAvailability(String input) {
         try {
-            String[] availabilityStr = input.split(",");
-            if (availabilityStr.length != 5) {
-                throw new IllegalArgumentException("Invalid format. Please enter exactly 5 values.");
+            String[] availabilities = input.split(",");
+            if (availabilities.length != 5) {
+                outputArea.append("\n❌ Please enter exactly 5 availability values (true/false) separated by commas.");
+                outputArea.append("\nEnter new availability for Monday to Friday (true/false) separated by commas (e.g., true,false,true,true,false): ");
+                return;
             }
             boolean[] availability = new boolean[5];
             for (int i = 0; i < 5; i++) {
-                availability[i] = Boolean.parseBoolean(availabilityStr[i].trim());
+                availability[i] = Boolean.parseBoolean(availabilities[i].trim());
             }
+            final String name = tempInput;
             captureOutput(() -> {
-                store.changeEmployeeAvailability(tempInput, availability);
+                store.changeEmployeeAvailability(name, availability);
                 store.saveState();
                 store.displaySchedule();
             });
             hideInputPanel();
         } catch (Exception e) {
-            outputArea.append("\n❌ Invalid input. Please enter availability as true/false separated by commas.");
+            outputArea.append("\n❌ Invalid input. Please use true/false values separated by commas.");
             outputArea.append("\nEnter new availability for Monday to Friday (true/false) separated by commas (e.g., true,false,true,true,false): ");
         }
     }
 
     private void updateTotalCost() {
         double total = 0.0;
-        List<Product> inventory = getInventory();
-
-        for (Product p : inventory) {
-            int quantity = productQuantities.get(p.getName());
-            total += p.getSellingPrice() * quantity;
+        for (Product p : getInventory()) {
+            int quantity = productQuantities.getOrDefault(p.getName(), 0);
+            total += quantity * p.getSellingPrice();
         }
-
         totalCostLabel.setText(String.format("Total: $%.2f", total));
     }
 
     private void confirmPurchase() {
-        List<Product> inventory = getInventory();
         boolean hasItems = false;
-
-        for (Product p : inventory) {
-            int quantity = productQuantities.get(p.getName());
-            if (quantity > 0) {
+        for (Map.Entry<String, Integer> entry : productQuantities.entrySet()) {
+            if (entry.getValue() > 0) {
                 hasItems = true;
-                captureOutput(() -> store.sellProduct(p.getName(), quantity));
+                final String name = entry.getKey();
+                final int quantity = entry.getValue();
+                captureOutput(() -> {
+                    store.sellProduct(name, quantity);
+                    store.saveState();
+                });
             }
         }
-
         if (!hasItems) {
-            outputArea.append("\n❌ No products selected for purchase.");
+            outputArea.append("\n❌ No items selected for purchase.");
         } else {
-            outputArea.append("\n✅ Purchase completed successfully!");
+            outputArea.append("\n✅ Purchase completed!");
+            for (String productName : productQuantities.keySet()) {
+                productQuantities.put(productName, 0);
+                if (quantityFields.get(productName) != null) {
+                    quantityFields.get(productName).setText("0");
+                }
+            }
+            updateTotalCost();
+            hideProductButtons();
+            mainMenuPanel.setVisible(true);
+            showEastPanel(IMAGE_PANEL);
         }
-
-        hideProductButtons();
-        menuPanel.setVisible(true);
-        monthPanel.setVisible(false);
-        orderHistoryScrollPane.setVisible(false);
-        editProductScrollPane.setVisible(false);
-        for (String productName : productQuantities.keySet()) {
-            productQuantities.put(productName, 0);
-            quantityFields.get(productName).setText("0");
-        }
-        updateTotalCost();
-    }
-
-    private void captureOutput(Runnable method) {
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-        java.io.PrintStream originalOut = System.out;
-        System.setOut(new java.io.PrintStream(out));
-
-        method.run();
-
-        System.setOut(originalOut);
-        outputArea.append("\n" + out.toString());
-        outputArea.setCaretPosition(outputArea.getDocument().getLength());
-    }
-
-    private List<Product> getInventory() {
-        return store.getInventory();
+        revalidate();
+        repaint();
     }
 
     public static void main(String[] args) {
@@ -851,34 +1093,125 @@ public class MainFrame extends JFrame {
 
 class PasswordDialog extends JDialog {
     private boolean confirmed = false;
+    private JPasswordField passwordField;
+    private static String currentPassword = "admin123";
 
     public PasswordDialog(JFrame parent) {
-        super(parent, "Enter Password", true);
-        setLayout(new BorderLayout());
+        super(parent, "Admin Access", true);
+        setLayout(new GridLayout(3, 2, 10, 10));
         setSize(300, 150);
         setLocationRelativeTo(parent);
 
-        JPanel panel = new JPanel(new GridLayout(2, 1));
-        JTextField passwordField = new JPasswordField(10);
-        JButton confirmButton = new JButton("Confirm");
+        JLabel label = new JLabel("Enter Password:");
+        passwordField = new JPasswordField();
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
 
-        confirmButton.addActionListener(e -> {
-            String password = passwordField.getText();
-            if ("admin".equals(password)) {
+        okButton.addActionListener(e -> {
+            String password = new String(passwordField.getPassword());
+            if (password.equals(currentPassword)) {
                 confirmed = true;
                 dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Incorrect password!", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Incorrect password.", "Error", JOptionPane.ERROR_MESSAGE);
+                passwordField.setText("");
             }
         });
 
-        panel.add(new JLabel("Password: "));
-        panel.add(passwordField);
-        add(panel, BorderLayout.CENTER);
-        add(confirmButton, BorderLayout.SOUTH);
+        cancelButton.addActionListener(e -> dispose());
+
+        add(label);
+        add(passwordField);
+        add(new JLabel());
+        add(okButton);
+        add(new JLabel());
+        add(cancelButton);
     }
 
     public boolean isConfirmed() {
         return confirmed;
     }
+
+    public static void setPassword(String newPassword) {
+        currentPassword = newPassword;
+    }
+
+    public static String getCurrentPassword() {
+        return currentPassword;
+    }
 }
+
+class ChangePasswordDialog extends JDialog {
+    private boolean changed = false;
+    private JPasswordField currentPasswordField;
+    private JPasswordField newPasswordField;
+    private JPasswordField confirmPasswordField;
+
+    public ChangePasswordDialog(JFrame parent) {
+        super(parent, "Change Password", true);
+        setLayout(new GridLayout(5, 2, 10, 10));
+        setSize(400, 250);
+        setLocationRelativeTo(parent);
+
+        JLabel currentLabel = new JLabel("Current Password:");
+        currentPasswordField = new JPasswordField();
+        JLabel newLabel = new JLabel("New Password:");
+        newPasswordField = new JPasswordField();
+        JLabel confirmLabel = new JLabel("Confirm New Password:");
+        confirmPasswordField = new JPasswordField();
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        saveButton.addActionListener(e -> {
+            String currentPassword = new String(currentPasswordField.getPassword());
+            String newPassword = new String(newPasswordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
+
+            if (!currentPassword.equals(PasswordDialog.getCurrentPassword())) {
+                JOptionPane.showMessageDialog(this, "Incorrect current password.", "Error", JOptionPane.ERROR_MESSAGE);
+                currentPasswordField.setText("");
+                return;
+            }
+
+            if (newPassword.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "New password cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (newPassword.length() < 6) {
+                JOptionPane.showMessageDialog(this, "New password must be at least 6 characters.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (!newPassword.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "New passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
+                newPasswordField.setText("");
+                confirmPasswordField.setText("");
+                return;
+            }
+
+            PasswordDialog.setPassword(newPassword);
+            changed = true;
+            dispose();
+        });
+
+        cancelButton.addActionListener(e -> dispose());
+
+        add(currentLabel);
+        add(currentPasswordField);
+        add(newLabel);
+        add(newPasswordField);
+        add(confirmLabel);
+        add(confirmPasswordField);
+        add(new JLabel());
+        add(saveButton);
+        add(new JLabel());
+        add(cancelButton);
+    }
+
+    public boolean isChanged() {
+        return changed;
+    }
+}
+
+//431123124

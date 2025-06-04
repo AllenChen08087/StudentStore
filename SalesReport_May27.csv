@@ -1,0 +1,6 @@
+English,Chinese,# per box,cost per box,cost per unit,price at store,profit margin,vendor,Type,BOW inventory,Inventory purchases,EOW Inventory,Inventory Sold,Total Revenue,Gross Profit (profit margin),Weekly Expenses,Gross Profit (rev-expenses)
+"Sprite","雪碧330 (易開)",24,315,13,25,12,"coke","Drink",120,20,100,40,125.00,60.00,0,60.00
+"Coke","可口可樂330g",24,315,13,25,12,"coke","Drink",120,20,100,40,125.00,60.00,0,60.00
+"Milk Tea","御茶園特上奶茶550g",24,450,19,30,11,"coke","Drink",120,20,100,40,0.00,0.00,0,0.00
+"Black Tea","御茶園特上紅茶550g",24,450,19,30,11,"coke","Drink",120,20,100,40,0.00,0.00,0,0.00
+"Chocolate Milk","光泉巧克力牛奶200g",24,290,12,20,8,"coke","Drink",120,20,100,40,0.00,0.00,0,0.00

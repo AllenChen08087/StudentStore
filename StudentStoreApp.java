@@ -717,6 +717,44 @@ class StudentStore {
         }
     }
 
+    public String generateSalesReportCSV(int month) {
+        checkAndResetSales();
+        StringBuilder csvContent = new StringBuilder();
+        Map<String, Integer> sales = monthlySalesData.getOrDefault(month, new HashMap<>());
+        Map<String, Double> profits = monthlyProfitData.getOrDefault(month, new HashMap<>());
+        Double revenue = monthlyRevenue.getOrDefault(month, 0.0);
+        Double profit = monthlyProfit.getOrDefault(month, 0.0);
+
+        // Header
+        csvContent.append("Product Name,Units Sold,Profit,Stock Remaining\n");
+
+        if (sales.isEmpty()) {
+            return csvContent.toString();
+        }
+
+        // Product rows
+        for (Map.Entry<String, Integer> entry : sales.entrySet()) {
+            String productName = entry.getKey();
+            int unitsSold = entry.getValue();
+            double productProfit = profits.getOrDefault(productName, 0.0);
+            int remainingStock = 0;
+            for (Product p : inventory) {
+                if (p.getName().equalsIgnoreCase(productName)) {
+                    remainingStock = p.getStock();
+                    break;
+                }
+            }
+            csvContent.append(String.format("\"%s\",%d,%.2f,%d\n", 
+                productName, unitsSold, productProfit, remainingStock));
+        }
+
+        // Total rows
+        csvContent.append(String.format("Total Revenue,,%.2f,\n", revenue));
+        csvContent.append(String.format("Total Profit,,%.2f,\n", profit));
+
+        return csvContent.toString();
+    }
+
     public void displayOrderHistory() {
         checkAndResetSales();
         System.out.println("\n===== Order History =====");
@@ -812,16 +850,19 @@ class StudentStore {
         Map<String, Integer> sales = monthlySalesData.getOrDefault(month, new HashMap<>());
         Map<String, Double> profits = monthlyProfitData.getOrDefault(month, new HashMap<>());
 
-        if (sales.isEmpty()) {
+        if (sales.isEmpty() && inventory.stream().allMatch(p -> sales.getOrDefault(p.getName(), 0) == 0)) {
             System.out.println("\nNo sales data available for month " + month + ".");
             return;
         }
 
-        String mostPopular = null, leastPopular = null, mostProfitable = null;
+        List<String> mostPopular = new ArrayList<>();
+        List<String> leastPopular = new ArrayList<>();
+        List<String> mostProfitable = new ArrayList<>();
         int maxSales = 0;
-        double maxProfit = 0.0;
         int minSales = Integer.MAX_VALUE;
+        double maxProfit = 0.0;
 
+        // First pass: determine max/min sales and max profit
         for (Product product : inventory) {
             String productName = product.getName();
             int salesCount = sales.getOrDefault(productName, 0);
@@ -829,36 +870,44 @@ class StudentStore {
 
             if (salesCount > maxSales) {
                 maxSales = salesCount;
-                mostPopular = productName;
             }
-
-            if (salesCount < minSales && sales.containsKey(productName)) {
+            if (salesCount < minSales) {
                 minSales = salesCount;
-                leastPopular = productName;
             }
-
             if (productProfit > maxProfit) {
                 maxProfit = productProfit;
-                mostProfitable = productName;
+            }
+        }
+
+        // Second pass: collect all products matching max/min sales and max profit
+        for (Product product : inventory) {
+            String productName = product.getName();
+            int salesCount = sales.getOrDefault(productName, 0);
+            double productProfit = profits.getOrDefault(productName, 0.0);
+
+            if (salesCount == maxSales && salesCount > 0) {
+                mostPopular.add(productName);
+            }
+            if (salesCount == minSales) {
+                leastPopular.add(productName);
+            }
+            if (productProfit == maxProfit && productProfit > 0) {
+                mostProfitable.add(productName);
             }
         }
 
         System.out.println("\n===== Product Insights for Month " + month + " =====");
-        if (mostPopular != null) {
-            System.out.println("🔥 Most Popular Product: " + mostPopular + " (" + maxSales + " units sold)");
+        if (!mostPopular.isEmpty()) {
+            System.out.println("🔥 Most Popular Product(s): " + String.join(", ", mostPopular) + " (" + maxSales + " units sold)");
         } else {
-            System.out.println("🔥 Most Popular Product: None");
+            System.out.println("🔥 Most Popular Product(s): None");
         }
-        if (leastPopular != null) {
-            System.out.println("🧊 Least Popular Product: " + leastPopular + " (" + minSales + " units sold)");
+        if (!leastPopular.isEmpty()) {
+            System.out.println("🧊 Least Popular Product(s): " + String.join(", ", leastPopular) + " (" + minSales + " units sold)");
         } else {
-            System.out.println("🧊 Least Popular Product: None");
+            System.out.println("🧊 Least Popular Product(s): None");
         }
-        if (mostProfitable != null) {
-            System.out.printf("💰 Most Profitable Product: %s ($%.2f profit)%n", mostProfitable, maxProfit);
-        } else {
-            System.out.println("💰 Most Profitable Product: None");
-        }
+        
     }
 
     public void showPopularAndProfitableProducts() {
